@@ -1,0 +1,22 @@
+{
+ "name": "Plan 10K Chico",
+ "short_name": "10K Chico",
+ "start_url": "./chico.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#0a1f3c",
+ "theme_color": "#0a1f3c",
+ "lang": "es",
+ "icons": [
+  {
+   "src": "icon-180.png",
+   "sizes": "180x180",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  }
+ ]
+}
