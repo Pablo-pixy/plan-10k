@@ -4,8 +4,8 @@
  "start_url": "./chica.html",
  "scope": "./",
  "display": "standalone",
- "background_color": "#0a1f3c",
- "theme_color": "#0a1f3c",
+ "background_color": "#f3f5f4",
+ "theme_color": "#0b8a7e",
  "lang": "es",
  "icons": [
   {
