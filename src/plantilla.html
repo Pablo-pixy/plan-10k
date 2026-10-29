@@ -78,9 +78,15 @@ input,textarea{font:inherit}
 .bars button,.bars div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
 .bars i{display:grid;place-items:center;width:100%;max-width:30px;height:52px;border-radius:999px;background:var(--field);color:#fff}
 .bars i .ic{width:16px;height:16px;stroke-width:2.6}
-.bars .run i{background:var(--teal-2)} .bars .gym i{background:var(--violet-2)} .bars .race i{background:var(--coral-2)}
+/* pendiente: color suave + borde + icono del tipo; hecho: relleno con ✓; descanso: gris con + tenue */
+.bars .run i{background:var(--teal-2);color:var(--teal);box-shadow:inset 0 0 0 2px var(--teal)}
+.bars .gym i{background:var(--violet-2);color:var(--violet);box-shadow:inset 0 0 0 2px var(--violet)}
+.bars .race i{background:var(--coral-2);color:var(--coral);box-shadow:inset 0 0 0 2px var(--coral)}
+.bars .done i{box-shadow:none;color:#fff}
+.bars i.rst{color:#c9d1ce}
+.bars i.rst .ic{width:14px;height:14px;stroke-width:2.2}
 .bars .run.done i{background:var(--teal)} .bars .gym.done i{background:var(--violet)} .bars .race.done i{background:var(--coral)}
-.bars .miss i{background:var(--amber-2);color:var(--amber)}
+.bars .miss i{background:var(--amber-2);color:var(--amber);box-shadow:inset 0 0 0 2px var(--amber)}
 .bars .tdy span{color:var(--ink);font-weight:700}
 
 /* estado */
@@ -119,6 +125,8 @@ details.status[open] summary .chev{transform:rotate(90deg)}
 .row .tx em{display:block;font-style:normal;font-size:14px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .bd{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;border:2px solid var(--line);color:#fff}
 .row .bd .ic{width:16px;height:16px;stroke-width:2.6}
+.row.run .bd{border-color:var(--teal);color:var(--teal);background:var(--teal-2)} .row.gym .bd{border-color:var(--violet);color:var(--violet);background:var(--violet-2)} .row.race .bd{border-color:var(--coral);color:var(--coral);background:var(--coral-2)}
+.row .bd.done{color:#fff}
 .row.run .bd.done{background:var(--teal);border-color:var(--teal)}
 .row.gym .bd.done{background:var(--violet);border-color:var(--violet)}
 .row.race .bd.done{background:var(--coral);border-color:var(--coral)}
@@ -1134,9 +1142,9 @@ function todayView(C,today){
   for(var di=0;di<7;di++){
     var d=addDays(ws,di),ss=SESSIONS.filter(function(x){return x.date===d;}),s=ss[0];
     if(s){tot2+=ss.length;ss.forEach(function(x){if((state.logs[x.id]||{}).done)done++;});}
-    if(!s){bars+=(d>=START&&d<RACE?'<button data-act="addday" data-date="'+d+'" aria-label="'+DAYS[di]+': descanso, añadir entreno"':'<div')+(d===today?' class="tdy"':'')+'><i></i><span>'+L7[di]+'</span>'+(d>=START&&d<RACE?'</button>':'</div>');continue;}
+    if(!s){bars+=(d>=START&&d<RACE?'<button data-act="addday" data-date="'+d+'" aria-label="'+DAYS[di]+': descanso, añadir entreno"':'<div')+(d===today?' class="tdy"':'')+'><i class="rst">'+(d>=START&&d<RACE?ic('plus'):'')+'</i><span>'+L7[di]+'</span>'+(d>=START&&d<RACE?'</button>':'</div>');continue;}
     var st=statusOf(s,today);
-    bars+='<button class="'+sKind(s)+(st==='done'?' done':(st==='miss'?' miss':''))+(d===today?' tdy':'')+'" data-act="open" data-id="'+s.id+'" aria-label="'+DAYS[di]+': '+esc(s.kind==='gym'?sTitle(s):sTitle(s,C.info[s.id]))+'"><i>'+(st==='done'?ic('check'):(st==='miss'?'!':''))+'</i><span>'+L7[di]+'</span></button>';
+    bars+='<button class="'+sKind(s)+(st==='done'?' done':(st==='miss'?' miss':''))+(d===today?' tdy':'')+'" data-act="open" data-id="'+s.id+'" aria-label="'+DAYS[di]+': '+esc(s.kind==='gym'?sTitle(s):sTitle(s,C.info[s.id]))+'"><i>'+(st==='done'?ic('check'):(st==='miss'?'!':ic(s.kind==='gym'?'dumb':(s.kind==='race'?'flag':'shoe'))))+'</i><span>'+L7[di]+'</span></button>';
   }
   h+='<div class="card wdays"><div class="top2"><div><h2 style="margin:0 0 4px">Días de entreno</h2><div class="cnt">'+done+' <small>de '+tot2+'</small></div></div><span class="small">Esta semana</span></div><div class="bars">'+bars+'</div></div>';
   h+=statusLine(C,today);
@@ -1160,7 +1168,7 @@ function planView(C,today){
     ss.forEach(function(s){
       var I=C.info[s.id],st=statusOf(s,today),k=sKind(s);
       var t=s.kind==='gym'?sTitle(s):sTitle(s,I),sub=s.kind==='gym'?gymSub(s):sSub(s,I);
-      h+='<button class="row '+k+(d===today?' today':'')+'" data-act="open" data-id="'+s.id+'">'+dt+'<span class="tx"><b><i class="tag"></i>'+esc(t)+'</b><em>'+esc(sub)+(s.moved?' · movida':'')+'</em></span><span class="bd'+(st==='done'?' done':(st==='miss'?' miss':''))+'">'+(st==='done'?ic('check'):(st==='miss'?'!':''))+'</span></button>';
+      h+='<button class="row '+k+(d===today?' today':'')+'" data-act="open" data-id="'+s.id+'">'+dt+'<span class="tx"><b><i class="tag"></i>'+esc(t)+'</b><em>'+esc(sub)+(s.moved?' · movida':'')+'</em></span><span class="bd'+(st==='done'?' done':(st==='miss'?' miss':''))+'">'+(st==='done'?ic('check'):(st==='miss'?'!':ic(s.kind==='gym'?'dumb':(s.kind==='race'?'flag':'shoe'))))+'</span></button>';
     });
   }
   h+='</div>';
