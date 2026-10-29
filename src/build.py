@@ -6,8 +6,8 @@ headextra='''<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#f3f5f4">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-v3-180.png">
+<link rel="icon" href="icon-v3-180.png">
 <link rel="manifest" href="manifest-%s.webmanifest">
 <script>window.__OCR_LOCAL=true;</script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
@@ -16,11 +16,11 @@ for pid,name,f,title in [('chico','Chico','tanaka','Plan 10K Chico'),('chica','C
     s=t.replace('__PROFILE_ID__',pid).replace('__DEFAULT_NAME__',name).replace('__DEFAULT_FORMULA__',f)
     s=s.replace('<title>Plan 10K · 31 dic</title>','<title>'+title+'</title>\n'+headextra%pid,1)
     open(ROOT+'/'+pid+'.html','w',encoding='utf-8').write(s)
-    man={"name":title,"short_name":"10K "+name,"start_url":"./"+pid+".html","scope":"./","display":"standalone","background_color":"#f3f5f4","theme_color":"#0b8a7e","lang":"es","icons":[{"src":"icon-180.png","sizes":"180x180","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
+    man={"name":title,"short_name":"10K "+name,"start_url":"./"+pid+".html","scope":"./","display":"standalone","background_color":"#f3f5f4","theme_color":"#0b8a7e","lang":"es","icons":[{"src":"icon-v3-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"icon-v3-512.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"icon-v3-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]}
     open(ROOT+'/manifest-'+pid+'.webmanifest','w').write(json.dumps(man,ensure_ascii=False,indent=1))
 index='''<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Plan 10K</title><link rel="icon" href="icon-180.png"><link rel="apple-touch-icon" href="icon-180.png"><meta name="theme-color" content="#f3f5f4">
+<title>Plan 10K</title><link rel="icon" href="icon-v3-180.png"><link rel="apple-touch-icon" href="icon-v3-180.png"><meta name="theme-color" content="#f3f5f4">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f3f5f4;--card:#fff;--ink:#1c2220;--mut:#66716d;--teal:#0b8a7e;--teal2:#d3eeea;--violet:#7a5fc8;color-scheme:light}

@@ -621,7 +621,7 @@ function computeStats(C,today){
       if(log.done){
         var km=num(log.km)||I.target, time=num(log.pace)*km;
         S.runs.push({date:s.date,kind:s.kind,slot:s.slot,km:km,time:time,pace:time>0?time/km:0,hr:num(log.hr),easy:isEasy(I.t)});
-        S.kmTot+=km;if(km>S.longest)S.longest=km;
+        S.kmTot+=km;var ck=contKm(log,I);if(ck>S.longest)S.longest=ck;
         if(time>0){S.secTot+=time;S.kmTime+=km;var p=time/km;if(!S.bestPace||p<S.bestPace)S.bestPace=p;}
       }
     }
@@ -633,18 +633,25 @@ function computeStats(C,today){
     if(bs){
       var BI=C.info[bs.id],bl=state.logs[bs.id]||{};
       S.longBase.push(bs.base.km);S.longTarget.push(BI.target);
-      S.longDone.push(bl.done?(num(bl.km)||BI.target):null);
+      S.longDone.push(bl.done?contKm(bl,BI):null);
     }else{S.longBase.push(null);S.longTarget.push(null);S.longDone.push(null);}
   }
   return S;
 }
 
+/* Distancia continua más larga de una carrera: con tramos, el tramo más largo; si no, el total */
+function contKm(log,I){
+  var T=segTotals(log);
+  if(T.n>=2){var mx=0;T.rows.forEach(function(r){if(r.km>mx)mx=r.km;});return mx;}
+  return num(log.km)||(I?I.target:0);
+}
+function contPlanned(I){return BLK[I.t]?BLK[I.t].km:I.target;}
 function readiness(C,today){
   var projBest=0,bestDone=0;
   SESSIONS.forEach(function(s){
     if(s.kind!=='run')return;
     var I=C.info[s.id],log=state.logs[s.id]||{};
-    var km=I.status==='done'?(num(log.km)||I.target):(I.status==='pending'?I.target:0);
+    var km=I.status==='done'?contKm(log,I):(I.status==='pending'?contPlanned(I):0);
     if(km>projBest)projBest=km;
     if(I.status==='done'&&km>bestDone)bestDone=km;
   });
@@ -1078,7 +1085,7 @@ function todayView(C,today){
   var dl=Math.max(0,diffDays(today,RACE)),tot=diffDays(START,RACE);
   h+='<div class="minis">';
   h+='<div class="mini">'+arc(78,7,ag.sess?ag.sessDone/ag.sess:0,C_TEAL,C_LINE,0.8,'<b>'+ag.sessDone+'/'+ag.sess+'</b>')+'<span>Sesiones<br>de la semana</span></div>';
-  h+='<div class="mini">'+arc(78,7,R.bestDone/10,C_VIOLET,C_LINE,0.8,'<b>'+fmtKm(R.bestDone)+'</b>')+'<span>Km más largos<br>de 10</span></div>';
+  h+='<div class="mini">'+arc(78,7,R.bestDone/10,C_VIOLET,C_LINE,0.8,'<b>'+fmtKm(R.bestDone)+'</b>')+'<span>Km seguidos<br>más largos</span></div>';
   h+='<div class="mini">'+arc(78,7,1-dl/tot,C_CORAL,C_LINE,0.8,'<b>'+dl+'</b>')+'<span>Días<br>para el 10K</span></div>';
   h+='</div></div>';
   var nx=nextSession(today);
@@ -1240,7 +1247,7 @@ function youView(C,today){
   h+='</div>';
   var labels=[];for(var i=0;i<WEEKS.length;i++)labels.push(String(i+1));
   h+='<div class="card"><h2>Km por semana</h2>'+barChart(labels,S.weekPlan,S.weekDone,curWeek(today))+'<div class="legend"><span><i style="background:'+C_TEAL2+'"></i>Previsto</span><span><i style="background:'+C_TEAL+'"></i>Hecho</span></div></div>';
-  h+='<div class="card"><h2>Tirada larga</h2>'+lineChart({title:'Tirada larga',labels:labels,yMin:0,yMax:12,yFmt:function(v){return Math.round(v);},hLines:[{y:10,label:'10K'}],
+  h+='<div class="card"><h2>Km seguidos en la tirada larga</h2>'+lineChart({title:'Tirada larga',labels:labels,yMin:0,yMax:12,yFmt:function(v){return Math.round(v);},hLines:[{y:10,label:'10K'}],
     series:[{pts:S.longTarget,color:C_FAINT,dash:true,noDots:true},{pts:S.longDone,color:C_VIOLET}]})+'<div class="legend"><span><i style="background:'+C_FAINT+'"></i>Prevista</span><span><i style="background:'+C_VIOLET+'"></i>Hecha</span></div></div>';
   if(S.runs.length){
     h+='<details class="card guide"><summary>Historial de carreras</summary><table style="margin-top:10px"><tr><th>Día</th><th>Km</th><th>Ritmo</th><th>FC</th></tr>';
