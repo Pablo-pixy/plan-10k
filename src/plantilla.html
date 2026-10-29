@@ -215,6 +215,10 @@ details.guide li{margin:6px 0}
 .btn.sec{flex:0 0 auto;padding:0 18px;background:var(--card);color:var(--ink)}
 .btn.gymc{background:var(--violet)} .btn.gymc.done{background:var(--violet-2);color:#4d3a92}
 .btn.dng{background:var(--red-2);color:var(--red)}
+.gz{display:flex;flex-wrap:wrap;gap:8px}
+.gzc{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 16px;border-radius:999px;background:var(--card);font-weight:600;font-size:15px;color:var(--ink)}
+.gzc .ic{width:16px;height:16px;stroke-width:2.6}
+.gzc.on{background:var(--violet);color:#fff}
 .linkbtn{color:var(--teal-ink);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
 
 /* selector de día */
@@ -680,26 +684,31 @@ function runDesc(t,km,downgraded,P,nrep){
   }
   return d;
 }
-function gymDesc(s){
-  var w=WEEKS[s.wi0],d;
-  if(s.gym===1){
-    if(w.race)return 'Tren superior suave, core y movilidad, sin pierna pesada para llegar fresco al 10K.';
-    d='Sentadilla, peso muerto rumano, zancadas, press y remo. 3 series de 8–10 repeticiones.';
-  }else{
-    d='Press, jalón o dominadas, remo, hombro y plancha, sin pierna pesada. 3 series de 8–12 repeticiones.';
-  }
-  if(w.descarga)d+=' Semana de descarga: baja la carga un 20–30 %.';
-  return d;
+/* Gimnasio: sin rutina fija; al registrar se marca qué se trabajó */
+var GZ=[['pierna','Pierna'],['sup','Tren superior'],['core','Core'],['full','Cuerpo completo'],['mov','Movilidad'],['cardio','Cardio']];
+var GD=[30,45,60,90];
+function gymSub(s){
+  var l=state.logs[s.id]||{},z=(l.gz||[]).map(function(k){for(var i=0;i<GZ.length;i++)if(GZ[i][0]===k)return GZ[i][1];return '';}).filter(Boolean);
+  if(z.length)return z.join(' · ')+(num(l.gd)?' · '+(l.gd>=90?'90+':l.gd)+' min':'');
+  return l.done?'Hecho':'Fuerza';
+}
+function gymHint(s){
+  var w=WEEKS[s.wi0],out=[];
+  var nb=SESSIONS.filter(function(x){return x.kind==='run'&&x.slot==='B'&&(diffDays(s.date,x.date)===1||x.date===s.date);})[0];
+  if(w.race)out.push('Semana del 10K: mejor sin pierna pesada.');
+  else if(nb)out.push(nb.date===s.date?'Hoy también tienes la tirada larga: si haces pierna, que sea suave.':'Mañana tienes la tirada larga: mejor sin pierna pesada hoy.');
+  if(w.descarga)out.push('Semana de descarga: baja la carga un 20–30 %.');
+  return out.join(' ');
 }
 var TT={suave:'Carrera suave',tirada:'Tirada larga',rectas:'Suave + rectas',race:'10K'};
 function sTitle(s,I){
-  if(s.kind==='gym')return s.gym===1?(WEEKS[s.wi0].race?'Gimnasio ligero':'Gimnasio · pierna'):'Gimnasio · tren superior';
+  if(s.kind==='gym')return 'Gimnasio';
   if(s.kind==='race')return 'Día del 10K';
   if(BLK[I.t])return (BLK[I.t].short?'Series ':'Bloques ')+I.nrep+'×'+distTxt(BLK[I.t].km);
   return TT[I.t]||'Carrera';
 }
 function sSub(s,I){
-  if(s.kind==='gym')return 'Fuerza · 45–60 min';
+  if(s.kind==='gym')return gymSub(s);
   var P=I.pace;
   if(s.kind==='race')return '10 km · objetivo '+secToHMS(P.P10*10*0.99)+'–'+secToHMS(P.P10*10*1.02);
   if(BLK[I.t])return fmtKm(I.target)+' km · tramos a '+secToPace(P.P10*BLK[I.t].k)+' /km';
@@ -982,8 +991,8 @@ function weekWarnings(wi){
       var dd=diffDays(a.date,b.date);
       var ra=a.kind==='run'||a.kind==='race',rb=b.kind==='run'||b.kind==='race';
       if(dd===1&&ra&&rb&&(inW(a)||inW(b)))out.push('Carreras en días seguidos: '+sesLabel(a)+' ('+DAYS[a.di]+') y '+sesLabel(b)+' ('+DAYS[b.di]+'). Mejor dejar un día de descanso entre ellas.');
-      if(a.kind==='gym'&&a.gym===1&&!WEEKS[a.wi0].race&&b.kind==='run'&&b.slot==='B'&&(dd===0||dd===1)&&(inW(a)||inW(b)))
-        out.push('Gimnasio 1 (con pierna) '+(dd===0?'el mismo día que':'el día antes de')+' la carrera B. Aleja la pierna pesada de la tirada larga.');
+      if(a.kind==='gym'&&((state.logs[a.id]||{}).gz||[]).indexOf('pierna')>=0&&b.kind==='run'&&b.slot==='B'&&(dd===0||dd===1)&&(inW(a)||inW(b)))
+        out.push('Pierna en el gimnasio '+(dd===0?'el mismo día que':'el día antes de')+' la tirada larga. Mejor separarlas.');
     });
   });
   win.forEach(function(s){
@@ -1090,7 +1099,7 @@ function todayView(C,today){
   h+='</div></div>';
   var nx=nextSession(today);
   if(nx){
-    var I=C.info[nx.id],k=sKind(nx),title=nx.kind==='gym'?sTitle(nx):sTitle(nx,I),sub=nx.kind==='gym'?'Fuerza · 45–60 min':sSub(nx,I);
+    var I=C.info[nx.id],k=sKind(nx),title=nx.kind==='gym'?sTitle(nx):sTitle(nx,I),sub=nx.kind==='gym'?'Al terminar, marca qué has entrenado':sSub(nx,I);
     h+='<button class="hero t-'+k+'" data-act="open" data-id="'+nx.id+'"><span class="k">Siguiente · '+esc(dayLabel(nx.date,today))+'</span><b>'+esc(title)+'</b><span class="s">'+esc(sub)+'</span><br><span class="go">Abrir y registrar '+ic('right')+'</span></button>';
   }else h+='<div class="card"><b>Plan completado.</b> <span class="mut">Enhorabuena.</span></div>';
   /* días de la semana */
@@ -1123,7 +1132,7 @@ function planView(C,today){
     if(!ss.length){h+='<div class="row rest'+(d===today?' today':'')+'">'+dt+'<span class="tx"><em>Descanso'+(d===today?' · hoy':'')+'</em></span></div>';continue;}
     ss.forEach(function(s){
       var I=C.info[s.id],st=statusOf(s,today),k=sKind(s);
-      var t=s.kind==='gym'?sTitle(s):sTitle(s,I),sub=s.kind==='gym'?'Fuerza · 45–60 min':sSub(s,I);
+      var t=s.kind==='gym'?sTitle(s):sTitle(s,I),sub=s.kind==='gym'?gymSub(s):sSub(s,I);
       h+='<button class="row '+k+(d===today?' today':'')+'" data-act="open" data-id="'+s.id+'">'+dt+'<span class="tx"><b><i class="tag"></i>'+esc(t)+'</b><em>'+esc(sub)+(s.moved?' · movida':'')+'</em></span><span class="bd'+(st==='done'?' done':(st==='miss'?' miss':''))+'">'+(st==='done'?ic('check'):(st==='miss'?'!':''))+'</span></button>';
     });
   }
@@ -1134,7 +1143,7 @@ function planView(C,today){
   h+='<li>Algunas semanas la carrera A va por tramos: bloques de 1,5 a 3 km a ritmo de 10K con descanso entre ellos (y una vez series cortas). Si llegas cansado o vienes de un parón, el plan lo cambia por una carrera suave.</li>';
   h+='<li>Cualquier carrera se puede apuntar por tramos: en su ficha, «Dividir en tramos con descansos».</li>';
   h+='<li>Sube la distancia, no el ritmo. Si una tirada cuesta, alterna 9 min corriendo y 1 min andando.</li>';
-  h+='<li>No hagas pierna pesada el día antes de la tirada larga. En las semanas 4 y 7 baja también el gimnasio.</li>';
+  h+='<li>En el gimnasio entrena lo que te venga bien y márcalo al terminar. Evita la pierna pesada el día antes de la tirada larga y baja la carga en las semanas 4 y 7.</li>';
   h+='<li>Si aparece un dolor que cambia tu forma de correr, para y baja la distancia esa semana.</li>';
   h+='</ul></details>';
   return h;
@@ -1195,8 +1204,12 @@ function sheetView(C,today){
   h+='<div class="handle"></div><button class="sh-x" data-act="closesheet" aria-label="Cerrar">'+ic('close')+'</button>';
   h+='<div class="sh-chips"><span class="pill '+k+'">'+(k==='gym'?'Gimnasio':(k==='race'?'Prueba':'Carrera '+s.slot))+'</span><span class="pill">'+esc(dayLabel(s.date,today))+'</span>'+(s.moved?'<span class="pill">Movida</span>':'')+(st==='done'?'<span class="pill ok">Hecho</span>':(st==='miss'?'<span class="pill miss">Sin hacer</span>':''))+'</div>';
   if(s.kind==='gym'){
-    h+='<h2 class="sh-t">'+esc(sTitle(s))+'</h2><p class="sh-s">Fuerza · 45–60 min</p>';
-    h+='<div class="steps"><div class="step"><i>'+ic('dumb')+'</i><div><span>'+esc(gymDesc(s))+'</span></div></div></div>';
+    var gz=log.gz||[],gd=num(log.gd),hint=gymHint(s);
+    h+='<h2 class="sh-t">Gimnasio</h2><p class="sh-s">¿Qué has entrenado?</p>';
+    h+='<div class="gz">';GZ.forEach(function(z){var on=gz.indexOf(z[0])>=0;h+='<button class="gzc'+(on?' on':'')+'" data-act="gymz" data-id="'+s.id+'" data-z="'+z[0]+'" aria-pressed="'+on+'">'+(on?ic('check'):'')+z[1]+'</button>';});h+='</div>';
+    h+='<div class="h3" style="margin-top:18px">Duración <span class="small" style="font-weight:500">(opcional)</span></div><div class="gz">';
+    GD.forEach(function(m){var on=gd===m;h+='<button class="gzc'+(on?' on':'')+'" data-act="gymd" data-id="'+s.id+'" data-m="'+m+'" aria-pressed="'+on+'">'+(m>=90?'90+':m)+' min</button>';});h+='</div>';
+    if(hint)h+='<p class="adj" style="color:var(--mut)">'+esc(hint)+'</p>';
     h+='<div class="btns"><button class="btn gymc'+(log.done?' done':'')+'" data-act="toggle" data-date="'+s.id+'">'+(log.done?'✓ Hecho':'Marcar como hecho')+'</button><button class="btn sec" data-act="picker" data-id="'+s.id+'">'+(ui.picker===s.id?'Cerrar':'Cambiar día')+'</button></div>';
     h+=pickerView(s);
     return h+'</div></div>';
@@ -1274,7 +1287,7 @@ function youView(C,today){
   function prow(key,label){var b='',i;for(i=0;i<7;i++)b+='<button class="'+(pd[key]===i?'on':'')+'" data-act="pat" data-k="'+key+'" data-i="'+i+'" aria-label="'+label+': '+DN[i]+'">'+L7[i]+'</button>';return '<div><span class="small" style="font-weight:600">'+label+' · '+DN[pd[key]]+'</span><div class="seg7">'+b+'</div></div>';}
   h+='<details'+(ui.open==='dias'?' open':'')+'><summary>Días de entrenamiento<span class="chev">'+ic('right')+'</span></summary><div class="body">';
   h+='<span class="small">Tus días habituales se aplican a las semanas que quedan. Cualquier sesión suelta se puede mover desde su ficha.</span>';
-  h+=prow('A','Carrera A (series)')+prow('B','Carrera B (tirada larga)')+prow('G1','Gimnasio 1 (pierna)')+prow('G2','Gimnasio 2 (tren superior)');
+  h+=prow('A','Carrera A (series)')+prow('B','Carrera B (tirada larga)')+prow('G1','Gimnasio 1')+prow('G2','Gimnasio 2');
   var dup=[],seen={};['A','B','G1','G2'].forEach(function(k){if(seen[pd[k]]!=null)dup.push(DN[pd[k]]);seen[pd[k]]=k;});
   var adj=Math.abs(pd.A-pd.B)===1||Math.abs(pd.A-pd.B)===6;
   if(dup.length||adj)h+='<div class="note">'+(dup.length?'Hay dos sesiones el '+dup.join(' y el ')+'. ':'')+(adj?'Las dos carreras quedan en días seguidos.':'')+'</div>';
@@ -1370,6 +1383,15 @@ document.getElementById('app').addEventListener('click',function(e){
     if(lg2.segs.length<2){if(lg2.segs.length===1&&num(lg2.segs[0].km)&&num(lg2.segs[0].pace)){lg2.km=num(lg2.segs[0].km);lg2.pace=num(lg2.segs[0].pace);}else if(lg2.ref){lg2.km=lg2.ref.km;lg2.pace=lg2.ref.pace;}delete lg2.segs;delete lg2.ref;}
     else syncSegs(lg2);
     save();render();
+  }
+  else if(act==='gymz'){
+    var gl=state.logs[id]||(state.logs[id]={}),z=el.getAttribute('data-z');gl.gz=gl.gz||[];
+    var ix=gl.gz.indexOf(z);if(ix>=0)gl.gz.splice(ix,1);else gl.gz.push(z);
+    if(gl.gz.length)gl.done=true;
+    save();render();
+  }
+  else if(act==='gymd'){
+    var gl2=state.logs[id]||(state.logs[id]={}),m=+el.getAttribute('data-m');gl2.gd=num(gl2.gd)===m?0:m;if(gl2.gd)gl2.done=true;save();render();
   }
   else if(act==='pat'){ui.patDraft[el.getAttribute('data-k')]=+el.getAttribute('data-i');ui.msg2='';render();}
   else if(act==='toggle'){
