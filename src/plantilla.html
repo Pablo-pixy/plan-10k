@@ -193,6 +193,22 @@ details.guide li{margin:6px 0}
 .rep .del .ic{width:16px;height:16px}
 .addrep{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:44px;margin-top:8px;border-radius:14px;border:1.5px dashed #c8d1ce;color:var(--teal-ink);font-weight:600;font-size:15px}
 .repsum{margin:8px 4px 0;font-size:14px;color:var(--mut)}
+.segs{background:var(--card);border-radius:20px;padding:6px 14px}
+.seg{display:grid;grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 14px 30px;gap:8px;align-items:center;padding:8px 0}
+.seg .n{font-weight:700;color:var(--faint);font-size:14px}
+.sf{display:flex;align-items:baseline;gap:4px;background:var(--field);border-radius:12px;padding:8px 10px;font-size:13px;color:var(--mut);min-width:0}
+.sf input{width:100%;min-width:0;border:0;background:transparent;font-size:17px;font-weight:600;color:var(--ink);padding:0;-webkit-appearance:none;appearance:none}
+.sf input:focus{outline:none}
+.sf input::placeholder{color:#b9c3bf}
+.sf:focus-within{box-shadow:0 0 0 2px var(--teal)}
+.seg .mk i{display:block;width:10px;height:10px;border-radius:50%}
+.seg .mk i.ok{background:var(--teal)} .seg .mk i.fast{background:var(--violet)} .seg .mk i.slow{background:var(--amber)}
+.seg .del{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--faint)}
+.seg .del .ic{width:16px;height:16px}
+.rest{display:flex;align-items:center;gap:10px;margin:0 0 0 30px;padding:2px 0 4px;font-size:13px;color:var(--mut);border-left:2px dashed var(--line);padding-left:12px}
+.rest .sf{width:96px;padding:6px 10px}
+.rest .sf input{font-size:15px}
+.fields.calc input{color:var(--teal-ink)}
 .btns{display:flex;gap:8px;margin-top:22px}
 .btn{flex:1;height:52px;border-radius:999px;background:var(--teal);color:#fff;font-weight:700;font-size:16px}
 .btn.done{background:var(--teal-2);color:var(--teal-ink)}
@@ -297,39 +313,54 @@ var MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','d
 var AMBER='#ffb84d', GREEN='#4ade80', BLUE='#5ea8ff', MUT='#8fb0d8';
 
 /* ====== Plan base (semana a semana) ======
-   Carrera A = sesión de calidad (series) cuando toca; carrera B = tirada larga.
-   Las semanas de descarga y la del 10K no llevan series. */
+   Carrera A = la de cambios de ritmo cuando toca (bloques largos con descanso y, una vez,
+   series cortas); carrera B = tirada larga. Descargas y semana del 10K, sin cambios de ritmo. */
 var WEEKS=[
   {A:{km:3,t:'suave'},   B:{km:4}},
-  {A:{km:4,t:'s200'},    B:{km:5}},
+  {A:{km:4,t:'suave'},   B:{km:5}},
   {A:{km:4.5,t:'s400'},  B:{km:6}},
   {A:{km:3,t:'rectas'},  B:{km:5}, descarga:true},
-  {A:{km:5,t:'s800'},    B:{km:7}},
-  {A:{km:5.5,t:'s1000'}, B:{km:8}},
+  {A:{km:5.5,t:'b2x2'},  B:{km:7}},
+  {A:{km:6,t:'b3x15'},   B:{km:8}},
   {A:{km:4,t:'suave'},   B:{km:6}, descarga:true},
-  {A:{km:6,t:'s1500'},   B:{km:8}},
-  {A:{km:5.5,t:'s1000b'},B:{km:9}},
+  {A:{km:7,t:'b3x2'},    B:{km:8}},
+  {A:{km:7,t:'b2x3'},    B:{km:9}},
   {A:{km:3,t:'rectas'},  race:true}
 ];
-/* Series: n repeticiones de d metros a k × ritmo de 10K estimado */
-var SER={
-  s200:  {n:6,d:200, k:0.92,rec:'200 m andando o trotando'},
-  s400:  {n:6,d:400, k:0.95,rec:'1:30 trotando suave'},
-  s800:  {n:5,d:800, k:0.97,rec:'2 min trotando suave'},
-  s1000: {n:4,d:1000,k:0.98,rec:'2 min trotando suave'},
-  s1500: {n:3,d:1500,k:0.99,rec:'3 min trotando suave'},
-  s1000b:{n:5,d:1000,k:1.00,rec:'90 s trotando suave'}
+/* Entrenos por tramos: n tramos de km cada uno a k × ritmo de 10K estimado, con descanso entre ellos */
+var BLK={
+  s400: {n:6,km:0.4,k:0.95,rest:1.5,how:'trotando suave',short:true},
+  b2x2: {n:2,km:2,  k:1.00,rest:3,  how:'andando o trotando'},
+  b3x15:{n:3,km:1.5,k:0.99,rest:3,  how:'andando o trotando'},
+  b3x2: {n:3,km:2,  k:1.00,rest:3,  how:'andando o trotando'},
+  b2x3: {n:2,km:3,  k:1.00,rest:4,  how:'andando o trotando'}
 };
-/* Ritmo de referencia de una serie suelta según su distancia (relativo al 10K) */
-function kRep(d){return d<=300?0.92:(d<=500?0.95:(d<=900?0.97:(d<=1200?0.98:(d<=1700?0.99:1))));}
-function repK(t,d){return (SER[t]&&SER[t].d===d)?SER[t].k:kRep(d);}
-function distTxt(d){return d>=1000?fmtKm(d/1000)+' km':Math.round(d)+' m';}
-function repsOf(log){return ((log&&log.reps)||[]).filter(function(r){return r&&num(r.d)>=100&&num(r.t)>0;});}
-/* Señal de forma de las series: ritmo de cada serie dividido por su factor → ritmo de 10K equivalente */
-function repSig(log,t){
-  var a=0,n=0;
-  repsOf(log).forEach(function(r){var d=num(r.d),p=num(r.t)/d*1000;if(p>=150&&p<=600){a+=p/repK(t,d);n++;}});
-  return n>=2?a/n:0;
+var SER=BLK; /* compatibilidad con el resto del código */
+function distTxt(km){return km>=1?fmtKm(km)+' km':Math.round(km*1000)+' m';}
+/* Tramos registrados: [{km,pace,rest}] (rest = minutos de descanso después del tramo).
+   Si se dividió una carrera ya apuntada, log.ref guarda su total para completar el último tramo. */
+function segRows(log){
+  var rows=((log&&log.segs)||[]).map(function(r){return {km:num(r.km),pace:num(r.pace),rest:num(r.rest),autoKm:false,autoPace:false};});
+  var ref=log&&log.ref,n=rows.length;
+  if(ref&&n>=2){
+    var last=rows[n-1],other=0,otherT=0,ok=true;rows.slice(0,-1).forEach(function(r){other+=r.km;otherT+=r.km*r.pace;if(!(r.km&&r.pace))ok=false;});
+    if(!last.km&&num(ref.km)-other>0.05){last.km=Math.round((num(ref.km)-other)*100)/100;last.autoKm=true;}
+    /* ritmo del último tramo: el que hace cuadrar el tiempo total apuntado */
+    if(!last.pace&&num(ref.pace)&&last.km){var pc=ok?(num(ref.km)*num(ref.pace)-otherT)/last.km:num(ref.pace);last.pace=Math.round((pc>=150&&pc<=900)?pc:num(ref.pace));last.autoPace=true;}
+  }
+  return rows;
+}
+function segTotals(log){
+  var rows=segRows(log),km=0,t=0,rest=0,n=0;
+  rows.forEach(function(r,i){if(r.km>0&&r.pace>0){km+=r.km;t+=r.km*r.pace;n++;}if(i<rows.length-1)rest+=r.rest;});
+  return {rows:rows,n:n,km:km,pace:km?t/km:0,time:t,rest:rest};
+}
+function syncSegs(log){var T=segTotals(log);if(T.n>=2){log.km=Math.round(T.km*100)/100;log.pace=Math.round(T.pace);}return T;}
+/* Señal de forma de un entreno por tramos planificado: ritmo de cada tramo / su factor → ritmo de 10K equivalente */
+function segSig(log,t){
+  var B=BLK[t];if(!B)return 0;
+  var a=0,w=0;segTotals(log).rows.forEach(function(r){if(r.km>=0.2&&r.pace>=150&&r.pace<=600){a+=r.pace/B.k*r.km;w+=r.km;}});
+  return w&&segTotals(log).n>=2?a/w:0;
 }
 function parseTimeIn(s){
   s=String(s||'');var m=s.match(/^(\d{1,2}):(\d{1,2})$/),v;
@@ -404,6 +435,7 @@ function migrate(){
   var L=state.logs||{},k,l,t,km;
   for(k in L){l=L[k];if(!l)continue;
     if(l.min!=null||l.sec!=null){t=num(l.min)*60+num(l.sec);km=num(l.km);if(!(num(l.pace)>0)&&t>0&&km>0)l.pace=Math.round(t/km);delete l.min;delete l.sec;}}
+  for(k in L){l=L[k];if(l&&l.reps){var rr=l.reps.filter(function(r){return r&&num(r.d)>0;});if(rr.length&&!l.segs)l.segs=rr.map(function(r){return {km:num(r.d)/1000,pace:num(r.t)>0?Math.round(num(r.t)/num(r.d)*1000):0,rest:0};});delete l.reps;}}
   if(!state.moves)state.moves={};
   if(!num(state.fcmax)){state.fcmax=String(fcTeo(DEFAULT_FORMULA,state.age));state.fcmaxSrc='teo-'+DEFAULT_FORMULA;}
   if(!state.fcmaxSrc)state.fcmaxSrc='manual';
@@ -528,9 +560,9 @@ function compute(today){
         var v=h.status==='done'?(h.km>0?h.km:h.target):(h.status==='pending'?h.target:0);
         if(v>best)best=v;
       });
-      k=Math.min(k,best+(s.slot==='B'?1.5:1),s.slot==='B'?10:7);
+      k=Math.min(k,best+(s.slot==='B'?1.5:1),s.slot==='B'?10:7.5);
       target=Math.max(2,Math.round(k*2)/2);
-      if(SER[t]){var df=SER[t];nrep=fEff<0.97?Math.max(3,Math.round(df.n*fEff)):(fEff>=1.06?df.n+1:df.n);}
+      if(BLK[t]){var df=BLK[t];nrep=fEff<0.97?Math.max(df.short?3:2,Math.round(df.n*fEff)):(fEff>=1.06&&df.short?df.n+1:df.n);}
       if(!summary&&status==='pending'){
         var ds=ev.filter(function(h){return h.status==='done';});
         var ms=ev.length-ds.length, rs=[];
@@ -545,9 +577,9 @@ function compute(today){
     /* ritmos: se estiman con lo hecho antes de esta sesión */
     var slow=gap>17?1.03:(gap>10?1.015:(fEff<0.9?1.015:1));
     var pace=pacePlan(hist,ref,slow,E0);
-    var time=num(log.pace)*km,hr=num(log.hr),sig=0,rsg=repSig(log,t);
-    if(done&&rsg)sig=rsg;
-    else if(done&&time>0&&km>=3&&!SER[t])sig=(time/km)*Math.pow(10/km,0.06)/effortK(t,hr);
+    var time=num(log.pace)*km,hr=num(log.hr),sig=0,ssg=segSig(log,t),ST=segTotals(log);
+    if(done&&ssg)sig=ssg;
+    else if(done&&time>0&&km>=3&&!BLK[t])sig=(time/km)*Math.pow(10/km,0.06)/effortK(t,hr)*(ST.n>=2&&ST.rest>0?1.02:1);
     info[s.id]={target:target,base:s.base.km,t:t,baseT:s.base.t,f:fEff,status:status,downgraded:downgraded,why:why,pace:pace,nrep:nrep};
     hist.push({date:s.date,status:status,km:km,target:target,hr:hr,sig:sig,easy:isEasy(t)});
     if(!paceNow&&status==='pending')paceNow=pace;
@@ -630,8 +662,8 @@ function pr(r){return secToPace(r[0])+'–'+secToPace(r[1]);}
 function hrCap(){var fm=fcmax();return fm?Math.round(fm*0.8):0;}
 function runDesc(t,km,downgraded,P,nrep){
   var k=fmtKm(km),e=pr(P.easy),cap=hrCap(),hrTxt=cap?' Pulsaciones por debajo de '+cap+'.':'',d;
-  if(SER[t]){var df=SER[t],p=P.P10*df.k;
-    return 'Calienta 15 min suave. '+nrep+'×'+distTxt(df.d)+' a '+secToPace(p)+' /km ('+secToHMS(p*df.d/1000)+' cada una), recuperando '+df.rec+'. Termina con 10 min suaves. Unos '+k+' km en total.';}
+  if(BLK[t]){var df=BLK[t],p=P.P10*df.k;
+    return 'Calienta 10–15 min suave. '+nrep+'×'+distTxt(df.km)+' a '+secToPace(p)+' /km, con '+fmtKm(df.rest)+' min '+df.how+' entre cada uno. Termina con 5–10 min suaves. Unos '+k+' km en total.';}
   switch(t){
     case 'suave': d=k+' km a ritmo suave, sin forzar ('+e+' /km).'+hrTxt;break;
     case 'tirada': d=k+' km a ritmo suave ('+e+' /km).'+hrTxt+' Si cuesta, alterna 9 min corriendo y 1 min andando.';break;
@@ -656,14 +688,14 @@ var TT={suave:'Carrera suave',tirada:'Tirada larga',rectas:'Suave + rectas',race
 function sTitle(s,I){
   if(s.kind==='gym')return s.gym===1?(WEEKS[s.wi0].race?'Gimnasio ligero':'Gimnasio · pierna'):'Gimnasio · tren superior';
   if(s.kind==='race')return 'Día del 10K';
-  if(SER[I.t])return 'Series '+I.nrep+'×'+distTxt(SER[I.t].d);
+  if(BLK[I.t])return (BLK[I.t].short?'Series ':'Bloques ')+I.nrep+'×'+distTxt(BLK[I.t].km);
   return TT[I.t]||'Carrera';
 }
 function sSub(s,I){
   if(s.kind==='gym')return 'Fuerza · 45–60 min';
   var P=I.pace;
   if(s.kind==='race')return '10 km · objetivo '+secToHMS(P.P10*10*0.99)+'–'+secToHMS(P.P10*10*1.02);
-  if(SER[I.t])return fmtKm(I.target)+' km · series a '+secToPace(P.P10*SER[I.t].k)+' /km';
+  if(BLK[I.t])return fmtKm(I.target)+' km · tramos a '+secToPace(P.P10*BLK[I.t].k)+' /km';
   return fmtKm(I.target)+' km · '+pr(P.easy)+' /km';
 }
 function sKind(s){return s.kind==='gym'?'gym':(s.kind==='race'?'race':'run');}
@@ -883,9 +915,11 @@ function readShot(id,file){
     return viaOcr(file);
   })
   .then(function(res){
-    var log=state.logs[id]||(state.logs[id]={}),got=[],miss=[],extra='';
-    if(res.km){log.km=Math.round(res.km*100)/100;got.push(fmtKm2(log.km)+' km');}else miss.push('km');
-    if(res.pace){log.pace=res.pace;got.push(secToPace(res.pace)+' /km');}else miss.push('ritmo');
+    var log=state.logs[id]||(state.logs[id]={}),got=[],miss=[],extra='',segMode=!!(log.segs&&log.segs.length);
+    if(segMode){log.ref={km:res.km?Math.round(res.km*100)/100:num((log.ref||{}).km),pace:res.pace||num((log.ref||{}).pace)};}
+    if(res.km){if(!segMode)log.km=Math.round(res.km*100)/100;got.push(fmtKm2(Math.round(res.km*100)/100)+' km');}else miss.push('km');
+    if(res.pace){if(!segMode)log.pace=res.pace;got.push(secToPace(res.pace)+' /km');}else miss.push('ritmo');
+    if(segMode){syncSegs(log);extra+=' Tienes tramos: el total de la captura se usa para completar el último tramo.';}
     if(res.hr){log.hr=res.hr;got.push(res.hr+' ppm');}else miss.push('FC media');
     if(res.hrmax){log.hrmax=res.hrmax;got.push('máx. '+res.hrmax+' ppm');
       var cur=fcmax();
@@ -1028,7 +1062,7 @@ function statusLine(C,today){
   if(P){
     var r='Suave '+pr(P.easy)+' /km · medio '+pr(P.medio)+' /km.';
     if(P.brake)r+=' Tus carreras suaves pasan del 85 % de tu FC máxima: los ritmos no suben hasta que las hagas más tranquilas.';
-    else if(P.nsig<2)r+=' Se ajustarán cuando registres 2 carreras de 3 km o más con ritmo, o series.';
+    else if(P.nsig<2)r+=' Se ajustarán cuando registres 2 carreras de 3 km o más con ritmo.';
     else if(P.P10<C.E0-1)r+=' Tu 10K estimado ha bajado '+secToHMS((C.E0-P.P10)*10)+' desde el inicio.';
     rows.push(['Ritmos',r]);
     rows.push(['10K','Estimado '+secToHMS(P.P10*10*0.99)+' – '+secToHMS(P.P10*10*1.02)+'. '+R.txt]);
@@ -1090,7 +1124,8 @@ function planView(C,today){
   var PN=C.paceNow,cap=hrCap();
   h+='<details class="card guide"><summary>Cómo seguir el plan</summary><ul>';
   h+='<li>Casi todos los km van a ritmo suave ('+pr(PN.easy)+' /km'+(cap?', pulsaciones por debajo de '+cap:'')+'): puedes hablar mientras corres.</li>';
-  h+='<li>Las series son el entreno rápido de la semana. Si llegas cansado o vienes de un parón, el plan las cambia por una carrera suave.</li>';
+  h+='<li>Algunas semanas la carrera A va por tramos: bloques de 1,5 a 3 km a ritmo de 10K con descanso entre ellos (y una vez series cortas). Si llegas cansado o vienes de un parón, el plan lo cambia por una carrera suave.</li>';
+  h+='<li>Cualquier carrera se puede apuntar por tramos: en su ficha, «Dividir en tramos con descansos».</li>';
   h+='<li>Sube la distancia, no el ritmo. Si una tirada cuesta, alterna 9 min corriendo y 1 min andando.</li>';
   h+='<li>No hagas pierna pesada el día antes de la tirada larga. En las semanas 4 y 7 baja también el gimnasio.</li>';
   h+='<li>Si aparece un dolor que cambia tu forma de correr, para y baja la distancia esa semana.</li>';
@@ -1101,28 +1136,38 @@ function planView(C,today){
 /* --- hoja de detalle de una sesión --- */
 function materialize(id,I){
   var log=state.logs[id]||(state.logs[id]={});
-  if(!log.reps||!log.reps.length){log.reps=[];if(I&&SER[I.t])for(var i=0;i<I.nrep;i++)log.reps.push({d:SER[I.t].d,t:0});}
+  if(!log.segs||!log.segs.length){
+    log.segs=[];
+    if(I&&BLK[I.t]){for(var i=0;i<I.nrep;i++)log.segs.push({km:BLK[I.t].km,pace:0,rest:i<I.nrep-1?BLK[I.t].rest:0});}
+    else{if(num(log.km)&&num(log.pace))log.ref={km:num(log.km),pace:num(log.pace)};log.segs=[{km:0,pace:0,rest:5},{km:0,pace:0,rest:0}];}
+  }
   return log;
 }
-function repsView(s,I,log){
-  var plan=SER[I.t],rows=(log.reps&&log.reps.length)?log.reps:(plan?Array.apply(null,Array(I.nrep)).map(function(){return {d:plan.d,t:0};}):[]);
-  var h='',sum=0,cnt=0,tsum=0;
-  if(rows.length){
-    h+='<div class="reps">';
-    rows.forEach(function(r,i){
-      var d=num(r.d),t=num(r.t),tp=I.pace.P10*repK(I.t,d),p=(d>0&&t>0)?t/d*1000:0,cls='',lbl='objetivo<br>'+secToPace(tp)+' /km';
-      if(p){var df=(p-tp)/tp;cls=Math.abs(df)<=0.03?'ok':(df<0?'fast':'slow');lbl=secToPace(p)+' /km<br>'+(cls==='ok'?'en ritmo':(cls==='fast'?'rápida':'lenta'));sum+=p/repK(I.t,d);cnt++;tsum+=tp/repK(I.t,d);}
-      h+='<div class="rep"><span class="n">'+(i+1)+'</span>';
-      h+='<label><input type="text" inputmode="numeric" data-date="'+s.id+'" data-field="rep-d" data-i="'+i+'" value="'+(d||'')+'" aria-label="Distancia de la serie '+(i+1)+'">m</label>';
-      h+='<label><input type="text" inputmode="decimal" data-date="'+s.id+'" data-field="rep-t" data-i="'+i+'" value="'+(t?secToPace(t):'')+'" placeholder="'+secToPace(tp*(d||400)/1000)+'" aria-label="Tiempo de la serie '+(i+1)+'"></label>';
-      h+='<span class="p '+cls+'">'+lbl+'</span>';
-      h+='<button class="del" data-act="delrep" data-id="'+s.id+'" data-i="'+i+'" aria-label="Quitar serie '+(i+1)+'">'+ic('close')+'</button></div>';
-    });
-    h+='</div>';
+function segsView(s,I,log,T){
+  var B=BLK[I.t],has=log.segs&&log.segs.length,h='<div class="h3">Tramos</div>';
+  var rows=has?T.rows:(B?Array.apply(null,Array(I.nrep)).map(function(_,i){return {km:B.km,pace:0,rest:i<I.nrep-1?B.rest:0,autoKm:false,autoPace:false};}):[]);
+  if(!rows.length){
+    return h+'<button class="addrep" data-act="splitseg" data-id="'+s.id+'">'+ic('plus')+'Dividir en tramos con descansos</button><p class="repsum">Por ejemplo: 3,2 km, 5 min andando y 2 km más. Los km y el ritmo medio se calculan solos.</p>';
   }
-  h+='<button class="addrep" data-act="addrep" data-id="'+s.id+'">'+ic('plus')+(rows.length?'Añadir serie':'Añadir series a este entreno')+'</button>';
-  if(cnt>=2){var dv=(sum-tsum)/tsum;h+='<p class="repsum">Media de las series '+(dv<=-0.01?'un '+Math.round(-dv*100)+' % más rápida que el objetivo':(dv>=0.01?'un '+Math.round(dv*100)+' % más lenta que el objetivo':'justo en el objetivo'))+'. El plan lo tiene en cuenta para los próximos ritmos.</p>';}
-  else if(rows.length)h+='<p class="repsum">Escribe el tiempo de cada serie (por ejemplo 212 → 2:12).</p>';
+  var tp=B?I.pace.P10*B.k:0;
+  h+='<div class="segs">';
+  rows.forEach(function(r,i){
+    var raw=has?(log.segs[i]||{}):{};
+    h+='<div class="seg"><span class="n">'+(i+1)+'</span>';
+    h+='<label class="sf"><input type="text" inputmode="decimal" autocomplete="off" data-date="'+s.id+'" data-field="seg-km" data-i="'+i+'" value="'+(num(raw.km)?fmtKm2(num(raw.km)):'')+'" placeholder="'+(r.km?fmtKm2(r.km):'0')+'" aria-label="Km del tramo '+(i+1)+'">km</label>';
+    h+='<label class="sf"><input type="text" inputmode="decimal" autocomplete="off" data-date="'+s.id+'" data-field="seg-pace" data-i="'+i+'" value="'+(num(raw.pace)?secToPace(num(raw.pace)):'')+'" placeholder="'+(r.pace?secToPace(r.pace):(tp?secToPace(tp):'m:ss'))+'" aria-label="Ritmo del tramo '+(i+1)+'">/km</label>';
+    var tag='';
+    if(B&&r.pace&&!r.autoPace){var dv=(r.pace-tp)/tp;tag=Math.abs(dv)<=0.03?'<i class="ok" title="En ritmo"></i>':(dv<0?'<i class="fast" title="Más rápido"></i>':'<i class="slow" title="Más lento"></i>');}
+    h+='<span class="mk">'+tag+'</span><button class="del" data-act="delseg" data-id="'+s.id+'" data-i="'+i+'" aria-label="Quitar tramo '+(i+1)+'">'+ic('close')+'</button></div>';
+    if(i<rows.length-1)h+='<div class="rest"><span>Descanso</span><label class="sf sm"><input type="text" inputmode="decimal" autocomplete="off" data-date="'+s.id+'" data-field="seg-rest" data-i="'+i+'" value="'+(has&&num(raw.rest)?fmtKm(num(raw.rest)):'')+'" placeholder="'+(r.rest?fmtKm(r.rest):'0')+'" aria-label="Minutos de descanso tras el tramo '+(i+1)+'">min</label></div>';
+  });
+  h+='</div><button class="addrep" data-act="addseg" data-id="'+s.id+'">'+ic('plus')+'Añadir tramo</button>';
+  if(T.n>=2){
+    var tx='Total: '+fmtKm2(T.km)+' km a '+secToPace(T.pace)+' /km'+(T.rest?' · '+fmtKm(T.rest)+' min de descanso':'')+'.';
+    if(B){var sg=segSig(log,I.t),dv2=sg?(sg-I.pace.P10)/I.pace.P10:0;tx+=' Tramos '+(dv2<=-0.01?'un '+Math.round(-dv2*100)+' % más rápidos que el objetivo':(dv2>=0.01?'un '+Math.round(dv2*100)+' % más lentos que el objetivo':'justo en el objetivo'))+'.';}
+    if(rows.some(function(r){return r.autoKm||r.autoPace;}))tx+=' El último tramo se completa con el total que tenías apuntado.';
+    h+='<p class="repsum">'+tx+'</p>';
+  }else h+='<p class="repsum">Escribe los km y el ritmo de cada tramo (545 → 5:45) y los minutos de descanso entre ellos.</p>';
   return h;
 }
 function shotBlock(s){
@@ -1151,30 +1196,31 @@ function sheetView(C,today){
   }
   var P=I.pace;
   h+='<h2 class="sh-t">'+esc(sTitle(s,I))+'</h2><p class="sh-s">'+esc(sSub(s,I))+'</p>';
-  if(SER[I.t]){
-    var df=SER[I.t],pp=P.P10*df.k;
+  if(BLK[I.t]){
+    var df=BLK[I.t],pp=P.P10*df.k;
     h+='<div class="steps">';
-    h+='<div class="step"><i>1</i><div><b>Calentamiento</b><span>15 min suave ('+pr(P.easy)+' /km)</span></div></div>';
-    h+='<div class="step"><i>2</i><div><b>'+I.nrep+' × '+distTxt(df.d)+' a '+secToPace(pp)+' /km</b><span>'+secToHMS(pp*df.d/1000)+' cada una · recupera '+df.rec+'</span></div></div>';
-    h+='<div class="step"><i>3</i><div><b>Vuelta a la calma</b><span>10 min muy suave</span></div></div>';
+    h+='<div class="step"><i>1</i><div><b>Calentamiento</b><span>10–15 min suave ('+pr(P.easy)+' /km)</span></div></div>';
+    h+='<div class="step"><i>2</i><div><b>'+I.nrep+' × '+distTxt(df.km)+' a '+secToPace(pp)+' /km</b><span>'+secToHMS(pp*df.km)+' cada uno · '+fmtKm(df.rest)+' min '+df.how+' entre tramos</span></div></div>';
+    h+='<div class="step"><i>3</i><div><b>Vuelta a la calma</b><span>5–10 min muy suave</span></div></div>';
     h+='</div>';
   }else h+='<div class="steps"><div class="step"><i>'+ic(s.kind==='race'?'flag':'shoe')+'</i><div><span>'+esc(runDesc(I.t,I.target,I.downgraded,P,I.nrep))+'</span></div></div></div>';
-  if(I.downgraded)h+='<p class="adj">Hoy tocaban series, pero el plan las cambia por una carrera suave porque '+esc(I.why)+'.</p>';
+  if(I.downgraded)h+='<p class="adj">Hoy tocaba un entreno con cambios de ritmo, pero el plan lo cambia por una carrera suave porque '+esc(I.why)+'.</p>';
   else if(s.kind==='run'&&Math.abs(I.target-I.base)>=0.5)h+='<p class="adj">'+(I.target<I.base?'Distancia reducida':'Distancia ampliada')+' según tus últimos entrenos (plan base: '+fmtKm(I.base)+' km).</p>';
   h+='<div class="h3">Registrar</div>'+shotBlock(s);
-  var kmv=num(log.km),pv=num(log.pace),hrv=num(log.hr),fm=fcmax();
-  h+='<div class="fields">';
-  h+='<label class="fld"><span>Km</span><input type="text" inputmode="decimal" autocomplete="off" data-date="'+s.id+'" data-field="km" value="'+(kmv>0?fmtKm2(kmv):'')+'" placeholder="'+fmtKm(I.target)+'"></label>';
-  h+='<label class="fld"><span>Ritmo medio</span><input type="text" inputmode="decimal" autocomplete="off" data-date="'+s.id+'" data-field="pace" value="'+(pv>0?secToPace(pv):'')+'" placeholder="'+secToPace(s.kind==='race'?P.P10:(P.easy[0]+P.easy[1])/2)+'"></label>';
+  var kmv=num(log.km),pv=num(log.pace),hrv=num(log.hr),fm=fcmax(),T=segTotals(log),bySeg=T.n>=2;
+  if(bySeg){kmv=T.km;pv=T.pace;}
+  var ro=bySeg?' readonly tabindex="-1"':'';
+  h+='<div class="fields'+(bySeg?' calc':'')+'">';
+  h+='<label class="fld"><span>Km'+(bySeg?' total':'')+'</span><input type="text" inputmode="decimal" autocomplete="off" data-date="'+s.id+'" data-field="km" value="'+(kmv>0?fmtKm2(kmv):'')+'" placeholder="'+fmtKm(I.target)+'"'+ro+'></label>';
+  h+='<label class="fld"><span>Ritmo medio</span><input type="text" inputmode="decimal" autocomplete="off" data-date="'+s.id+'" data-field="pace" value="'+(pv>0?secToPace(pv):'')+'" placeholder="'+secToPace(s.kind==='race'?P.P10:(P.easy[0]+P.easy[1])/2)+'"'+ro+'></label>';
   h+='<label class="fld"><span>FC media</span><input type="text" inputmode="numeric" autocomplete="off" data-date="'+s.id+'" data-field="hr" value="'+(hrv>0?String(Math.round(hrv)):'')+'" placeholder="'+(fm?Math.round(fm*0.8):'ppm')+'"></label>';
   h+='</div>';
   var info=[],hot=false;
-  if(pv>0)info.push('Tiempo ≈ '+secToHMS(pv*(kmv||I.target)));
+  if(bySeg)info.push('Calculado de los tramos');
+  if(pv>0)info.push((bySeg?'corriendo ':'Tiempo ≈ ')+secToHMS(pv*(kmv||I.target))+(bySeg&&T.rest?' + '+fmtKm(T.rest)+' min de descanso':''));
   if(hrv>0&&fm){info.push('FC al '+Math.round(100*hrv/fm)+' % de tu máxima');hot=isEasy(I.t)&&hrv/fm>0.85;}
   if(info.length)h+='<div class="derived'+(hot?' warn':'')+'">'+info.join(' · ')+(hot?'. Demasiado intensa para una carrera suave.':'')+'</div>';
-  if(s.kind==='run'){
-    h+='<div class="h3">Series</div>'+repsView(s,I,log);
-  }
+  if(s.kind==='run')h+=segsView(s,I,log,T);
   h+='<div class="btns"><button class="btn'+(log.done?' done':'')+'" data-act="toggle" data-date="'+s.id+'">'+(log.done?'✓ Hecho':'Marcar como hecho')+'</button>'+(s.kind==='race'?'':'<button class="btn sec" data-act="picker" data-id="'+s.id+'">'+(ui.picker===s.id?'Cerrar':'Cambiar día')+'</button>')+'</div>';
   h+=pickerView(s);
   return h+'</div></div>';
@@ -1241,8 +1287,8 @@ function youView(C,today){
   /* reglas */
   h+='<details><summary>Cómo se adapta el plan<span class="chev">'+ic('right')+'</span></summary><div class="body"><ul>';
   h+='<li>Distancia: se compara lo hecho con lo previsto en tus 4 últimas carreras. Una carrera sin hacer cuenta como un 70 %. Las próximas distancias se ajustan entre el 60 % y el 110 %, con un tope de subida por semana.</li>';
-  h+='<li>Series: se proponen en la carrera A cuando toca. Si la carga baja del 88 % o vienes de más de 10 días sin correr, se cambian por una carrera suave. Si vas algo justo, se quitan repeticiones; si vas sobrado, se añade una.</li>';
-  h+='<li>Ritmos: salen de tu referencia de 3 km y de tus últimas carreras. El ritmo de cada serie, comparado con su objetivo, cuenta como señal de forma. Mejoran como mucho un 1 % por semana y un 8 % en total.</li>';
+  h+='<li>Tramos: la carrera A propone bloques con descanso cuando toca. Si la carga baja del 88 % o vienes de más de 10 días sin correr, se cambian por una carrera suave. Si vas algo justo, se quita un tramo.</li>';
+  h+='<li>Ritmos: salen de tu referencia de 3 km y de tus últimas carreras. En los entrenos por tramos planificados cuenta el ritmo de los tramos frente a su objetivo; en una carrera normal con descansos, el ritmo medio con una pequeña corrección por las pausas. Mejoran como mucho un 1 % por semana y un 8 % en total.</li>';
   h+='<li>Pulsaciones: si tus carreras suaves pasan del 85 % de tu FC máxima, los ritmos no suben.</li>';
   h+='<li>Son reglas orientativas, no sustituyen el consejo de un entrenador o médico.</li>';
   h+='</ul></div></details>';
@@ -1306,12 +1352,17 @@ document.getElementById('app').addEventListener('click',function(e){
     var ms=sessById(id);if(ms)ui.week=ms.wi;
     render();
   }
-  else if(act==='addrep'){
-    var C1=compute(todayStr()),lg=materialize(id,C1.info[id]),last=lg.reps[lg.reps.length-1];
-    lg.reps.push({d:last?num(last.d):(SER[C1.info[id].t]?SER[C1.info[id].t].d:400),t:0});save();render();
+  else if(act==='splitseg'||act==='addseg'){
+    var C1=compute(todayStr()),lg=materialize(id,C1.info[id]);
+    if(act==='addseg'){var lt=lg.segs[lg.segs.length-1];if(lt&&!num(lt.rest))lt.rest=BLK[C1.info[id].t]?BLK[C1.info[id].t].rest:5;lg.segs.push({km:0,pace:0,rest:0});}
+    syncSegs(lg);save();render();
   }
-  else if(act==='delrep'){
-    var C2=compute(todayStr()),lg2=materialize(id,C2.info[id]);lg2.reps.splice(+el.getAttribute('data-i'),1);save();render();
+  else if(act==='delseg'){
+    var C2=compute(todayStr()),lg2=materialize(id,C2.info[id]);lg2.segs.splice(+el.getAttribute('data-i'),1);
+    if(lg2.segs.length)lg2.segs[lg2.segs.length-1].rest=0;
+    if(lg2.segs.length<2){if(lg2.segs.length===1&&num(lg2.segs[0].km)&&num(lg2.segs[0].pace)){lg2.km=num(lg2.segs[0].km);lg2.pace=num(lg2.segs[0].pace);}else if(lg2.ref){lg2.km=lg2.ref.km;lg2.pace=lg2.ref.pace;}delete lg2.segs;delete lg2.ref;}
+    else syncSegs(lg2);
+    save();render();
   }
   else if(act==='pat'){ui.patDraft[el.getAttribute('data-k')]=+el.getAttribute('data-i');ui.msg2='';render();}
   else if(act==='toggle'){
@@ -1390,14 +1441,17 @@ document.getElementById('app').addEventListener('input',function(e){
   if(!el.getAttribute||!el.getAttribute('data-field'))return;
   var d=el.getAttribute('data-date'),f=el.getAttribute('data-field');
   var log=state.logs[d]||(state.logs[d]={});
+  if((f==='km'||f==='pace')&&segTotals(log).n>=2){return;}
   if(f==='km'){var v=num(el.value);if(v>0&&v<100)log.km=v;else delete log.km;}
   else if(f==='pace'){var pc=parsePaceIn(fmtClock(el));if(pc)log.pace=pc;else delete log.pace;}
   else if(f==='hr'){var w=Math.round(num(el.value));if(w>=60&&w<=230)log.hr=w;else delete log.hr;}
-  else if(f==='rep-t'||f==='rep-d'){
+  else if(f==='seg-km'||f==='seg-pace'||f==='seg-rest'){
     var I=compute(todayStr()).info[d],lg=materialize(d,I),i=+el.getAttribute('data-i');
-    while(lg.reps.length<=i)lg.reps.push({d:(SER[I.t]?SER[I.t].d:400),t:0});
-    if(f==='rep-t')lg.reps[i].t=parseTimeIn(fmtClock(el));
-    else{var dm=Math.round(num(el.value));lg.reps[i].d=(dm>=50&&dm<=10000)?dm:0;}
+    while(lg.segs.length<=i)lg.segs.push({km:0,pace:0,rest:0});
+    if(f==='seg-km'){var kv=num(el.value);lg.segs[i].km=(kv>0&&kv<60)?kv:0;}
+    else if(f==='seg-pace')lg.segs[i].pace=parsePaceIn(fmtClock(el));
+    else{var rv=num(el.value);lg.segs[i].rest=(rv>=0&&rv<=60)?rv:0;}
+    syncSegs(lg);
   }
   save();scheduleRender();
 });
@@ -1418,7 +1472,7 @@ try{cloudInit();}catch(e){}
 try{aiInit();}catch(e){}
 var lastDay=todayStr();
 setInterval(function(){var t=todayStr();if(t!==lastDay){lastDay=t;render();}},60000);
-window.PLAN10K={shotParse:shotParse,readShot:readShot,compute:compute,parsePaceIn:parsePaceIn,repSig:repSig,SESSIONS:SESSIONS,BASE:BASE,weekWarnings:weekWarnings,getState:function(){return state;},ui:ui};
+window.PLAN10K={shotParse:shotParse,readShot:readShot,compute:compute,parsePaceIn:parsePaceIn,segTotals:segTotals,segSig:segSig,SESSIONS:SESSIONS,BASE:BASE,weekWarnings:weekWarnings,getState:function(){return state;},ui:ui};
 })();
 </script>
 </body>
